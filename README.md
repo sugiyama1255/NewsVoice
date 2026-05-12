@@ -35,6 +35,36 @@ http://127.0.0.1:8000/
 .\.venv\Scripts\python.exe manage.py test
 ```
 
+## 本番環境
+
+本番では `config.settings_production` を使います。秘密値はファイルに書かず、環境変数で渡してください。
+
+必須の環境変数:
+
+```text
+DJANGO_SETTINGS_MODULE=config.settings_production
+DJANGO_SECRET_KEY=長いランダム文字列
+DJANGO_ALLOWED_HOSTS=example.com,www.example.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://example.com,https://www.example.com
+GEMINI_API_KEY=your-api-key
+```
+
+PostgreSQL を使う場合は `DATABASE_URL` を設定します。未設定の場合は SQLite を使います。
+
+```text
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+```
+
+デプロイ時の代表的なコマンド:
+
+```bash
+python manage.py collectstatic --noinput --settings=config.settings_production
+python manage.py migrate --noinput --settings=config.settings_production
+gunicorn config.wsgi:application --env DJANGO_SETTINGS_MODULE=config.settings_production
+```
+
+Heroku系/Render系の Procfile 対応環境では、同梱の `Procfile` を使えます。
+
 ## 読み上げ
 
 初期状態では、ブラウザの SpeechSynthesis を使う簡易読み上げが有効です。
