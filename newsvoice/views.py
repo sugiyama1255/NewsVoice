@@ -26,7 +26,7 @@ def index(request):
     if request.GET and form.is_valid():
         started_at = time.monotonic()
         logger.info(
-            "news_search start category=%s keyword=%r max_records=%s timespan=%s language=%s",
+            "ニュース取得 全体開始 category=%s keyword=%r max_records=%s timespan=%s language=%s",
             form.cleaned_data["category"],
             form.cleaned_data["keyword"],
             form.cleaned_data["max_records"],
@@ -44,13 +44,13 @@ def index(request):
             saved_articles = NewsArticle.objects.select_related("summary").all()[:20]
             elapsed = time.monotonic() - started_at
             logger.info(
-                "news_search finished count=%s elapsed=%.3fs",
+                "ニュース取得 全体完了 count=%s elapsed=%.3fs",
                 len(search_results),
                 elapsed,
             )
             messages.success(request, f"{len(search_results)}件のニュースを取得しました。（{elapsed:.1f}秒）")
         except GdeltClientError as exc:
-            logger.exception("news_search failed elapsed=%.3fs", time.monotonic() - started_at)
+            logger.exception("ニュース取得 全体失敗 elapsed=%.3fs", time.monotonic() - started_at)
             messages.error(request, str(exc))
 
     return render(

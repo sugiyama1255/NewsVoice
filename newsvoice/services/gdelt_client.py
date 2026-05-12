@@ -60,7 +60,7 @@ def wait_for_rate_limit_slot():
     now = time.monotonic()
     wait_seconds = min_interval - (now - _last_request_at)
     if wait_seconds > 0:
-        logger.info("gdelt_rate_limit_wait elapsed=%.3fs", wait_seconds)
+        logger.info("GDELTアクセス間隔調整 wait=%.3fs", wait_seconds)
         time.sleep(wait_seconds)
     _last_request_at = time.monotonic()
 
@@ -85,11 +85,11 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
         for attempt in range(max_retries + 1):
             wait_for_rate_limit_slot()
             request_started_at = time.monotonic()
-            logger.info("gdelt_request start attempt=%s params=%s", attempt + 1, params)
+            logger.info("GDELTニュース取得 開始 attempt=%s params=%s", attempt + 1, params)
             response = requests.get(settings.GDELT_API_BASE_URL, params=params, headers=headers, timeout=20)
             request_elapsed = time.monotonic() - request_started_at
             logger.info(
-                "gdelt_request response attempt=%s status=%s elapsed=%.3fs",
+                "GDELTニュース取得 応答 attempt=%s status=%s elapsed=%.3fs",
                 attempt + 1,
                 response.status_code,
                 request_elapsed,
@@ -120,7 +120,7 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
                     f"少し待って再実行してください。応答内容: {body_preview}"
                 ) from exc
             articles = payload.get("articles", [])
-            logger.info("gdelt_request parsed count=%s", len(articles))
+            logger.info("GDELTニュース取得 解析完了 count=%s", len(articles))
             break
     except GdeltClientError:
         raise
@@ -161,16 +161,16 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
             translation_elapsed = time.monotonic() - translation_started_at
             translation_total += translation_elapsed
             logger.info(
-                "title_translation finished elapsed=%.3fs title=%r translated=%s",
+                "Geminiタイトル翻訳 完了 elapsed=%.3fs title=%r translated=%s",
                 translation_elapsed,
                 title[:120],
                 bool(title_ja),
             )
         except GeminiClientError:
-            logger.exception("title_translation gemini_error title=%r", title[:120])
+            logger.exception("Geminiタイトル翻訳 失敗 title=%r", title[:120])
             title_ja = ""
         except Exception:
-            logger.exception("title_translation unexpected_error title=%r", title[:120])
+            logger.exception("Geminiタイトル翻訳 想定外エラー title=%r", title[:120])
             title_ja = ""
 
         db_started_at = time.monotonic()
@@ -190,10 +190,10 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
         )
         db_elapsed = time.monotonic() - db_started_at
         db_total += db_elapsed
-        logger.info("article_store finished elapsed=%.3fs url=%s", db_elapsed, url)
+        logger.info("DB保存 完了 elapsed=%.3fs url=%s", db_elapsed, url)
         articles.append(article)
     logger.info(
-        "fetch_and_store_articles finished raw_count=%s stored_count=%s translation_total=%.3fs db_total=%.3fs elapsed=%.3fs",
+        "ニュース取得 内訳 raw_count=%s stored_count=%s gemini_translation_total=%.3fs db_total=%.3fs total_elapsed=%.3fs",
         len(raw_articles),
         len(articles),
         translation_total,
