@@ -1,3 +1,6 @@
+import logging
+import time
+
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
@@ -12,12 +15,24 @@ from .services.tts.audio_generator import generate_high_quality_audio, get_lates
 from .services.tts.base import TTSServiceError
 
 
+logger = logging.getLogger(__name__)
+
+
 def index(request):
     form = NewsSearchForm(request.GET or None)
     search_results = None
     saved_articles = NewsArticle.objects.select_related("summary").all()[:20]
 
     if request.GET and form.is_valid():
+        started_at = time.monotonic()
+        logger.info(
+            "news_search start category=%s keyword=%r max_records=%s timespan=%s language=%s",
+            form.cleaned_data["category"],
+            form.cleaned_data["keyword"],
+            form.cleaned_data["max_records"],
+            form.cleaned_data["timespan"],
+            form.cleaned_data["language"],
+        )
         try:
             search_results = fetch_and_store_articles(
                 category=form.cleaned_data["category"],
@@ -27,8 +42,15 @@ def index(request):
                 language=form.cleaned_data["language"],
             )
             saved_articles = NewsArticle.objects.select_related("summary").all()[:20]
-            messages.success(request, f"{len(search_results)}件のニュースを取得しました。")
+            elapsed = time.monotonic() - started_at
+            logger.info(
+                "news_search finished count=%s elapsed=%.3fs",
+                len(search_results),
+                elapsed,
+            )
+            messages.success(request, f"{len(search_results)}件のニュースを取得しました。（{elapsed:.1f}秒）")
         except GdeltClientError as exc:
+            logger.exception("news_search failed elapsed=%.3fs", time.monotonic() - started_at)
             messages.error(request, str(exc))
 
     return render(

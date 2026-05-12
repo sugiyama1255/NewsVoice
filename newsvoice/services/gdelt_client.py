@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import time
 from urllib.parse import urlparse
 
@@ -15,6 +16,7 @@ class GdeltClientError(Exception):
     pass
 
 
+logger = logging.getLogger(__name__)
 _last_request_at = 0.0
 
 
@@ -58,6 +60,7 @@ def wait_for_rate_limit_slot():
     now = time.monotonic()
     wait_seconds = min_interval - (now - _last_request_at)
     if wait_seconds > 0:
+        logger.info("gdelt_rate_limit_wait elapsed=%.3fs", wait_seconds)
         time.sleep(wait_seconds)
     _last_request_at = time.monotonic()
 
@@ -81,7 +84,16 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
     try:
         for attempt in range(max_retries + 1):
             wait_for_rate_limit_slot()
+            request_started_at = time.monotonic()
+            logger.info("gdelt_request start attempt=%s params=%s", attempt + 1, params)
             response = requests.get(settings.GDELT_API_BASE_URL, params=params, headers=headers, timeout=20)
+            request_elapsed = time.monotonic() - request_started_at
+            logger.info(
+                "gdelt_request response attempt=%s status=%s elapsed=%.3fs",
+                attempt + 1,
+                response.status_code,
+                request_elapsed,
+            )
             if response.status_code == 429 and attempt < max_retries:
                 time.sleep(retry_wait * (attempt + 1))
                 continue
@@ -107,6 +119,8 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
                     "アクセス制限や一時的な混雑の可能性があります。"
                     f"少し待って再実行してください。応答内容: {body_preview}"
                 ) from exc
+            articles = payload.get("articles", [])
+            logger.info("gdelt_request parsed count=%s", len(articles))
             break
     except GdeltClientError:
         raise
@@ -124,6 +138,7 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
 
 
 def fetch_and_store_articles(category="general", keyword="", max_records=5, timespan="1d", language=""):
+    total_started_at = time.monotonic()
     raw_articles = fetch_articles(
         category=category,
         keyword=keyword,
@@ -132,6 +147,8 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
         language=language,
     )
     articles = []
+    translation_total = 0.0
+    db_total = 0.0
     for item in raw_articles:
         url = item.get("url")
         title = item.get("title")
@@ -139,12 +156,24 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
             continue
         title_ja = ""
         try:
+            translation_started_at = time.monotonic()
             title_ja = translate_title_to_japanese(title)
+            translation_elapsed = time.monotonic() - translation_started_at
+            translation_total += translation_elapsed
+            logger.info(
+                "title_translation finished elapsed=%.3fs title=%r translated=%s",
+                translation_elapsed,
+                title[:120],
+                bool(title_ja),
+            )
         except GeminiClientError:
+            logger.exception("title_translation gemini_error title=%r", title[:120])
             title_ja = ""
         except Exception:
+            logger.exception("title_translation unexpected_error title=%r", title[:120])
             title_ja = ""
 
+        db_started_at = time.monotonic()
         article, _ = NewsArticle.objects.update_or_create(
             url=url,
             defaults={
@@ -159,5 +188,16 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
                 "gdelt_id": item.get("url_mobile") or "",
             },
         )
+        db_elapsed = time.monotonic() - db_started_at
+        db_total += db_elapsed
+        logger.info("article_store finished elapsed=%.3fs url=%s", db_elapsed, url)
         articles.append(article)
+    logger.info(
+        "fetch_and_store_articles finished raw_count=%s stored_count=%s translation_total=%.3fs db_total=%.3fs elapsed=%.3fs",
+        len(raw_articles),
+        len(articles),
+        translation_total,
+        db_total,
+        time.monotonic() - total_started_at,
+    )
     return articles

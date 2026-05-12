@@ -142,6 +142,37 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        },
+        "newsvoice_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "newsvoice.log",
+            "maxBytes": 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "standard",
+            "encoding": "utf-8",
+        },
+    },
+    "loggers": {
+        "newsvoice": {
+            "handlers": ["console", "newsvoice_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 # 環境固有設定を最後に読み込み、上の初期値を上書きできるようにします。
 try:
     from .settings_local import *
