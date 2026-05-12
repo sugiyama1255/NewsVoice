@@ -65,6 +65,8 @@ gunicorn config.wsgi:application --env DJANGO_SETTINGS_MODULE=config.settings_pr
 
 Heroku系/Render系の Procfile 対応環境では、同梱の `Procfile` を使えます。
 
+このサーバーでは `deploy/` 配下に systemd/nginx 用の設定例を置いています。
+
 ## 読み上げ
 
 初期状態では、ブラウザの SpeechSynthesis を使う簡易読み上げが有効です。

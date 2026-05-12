@@ -1,0 +1,19 @@
+[Unit]
+Description=Gunicorn service for newsvoice
+After=network.target
+
+[Service]
+User=hisatsugu
+Group=www-data
+WorkingDirectory=/home/hisatsugu/apps/newsvoice
+EnvironmentFile=/home/hisatsugu/apps/newsvoice/.env
+ExecStart=/home/hisatsugu/apps/newsvoice/.venv/bin/gunicorn config.wsgi:application \
+  --workers 2 \
+  --timeout 120 \
+  --bind 127.0.0.1:8004
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
