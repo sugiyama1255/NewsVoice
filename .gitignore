@@ -8,6 +8,7 @@ logs/
 media/
 staticfiles/
 config/settings_local.py
+codex_readme.txt
 chat_history.txt
 runserver.out.log
 runserver.err.log
