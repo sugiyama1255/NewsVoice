@@ -1,0 +1,103 @@
+{% extends "newsvoice/base.html" %}
+
+{% block title %}{{ article.display_title }}{% endblock %}
+
+{% block content %}
+<article class="detail">
+    <p><a href="{% url 'newsvoice:index' %}">一覧へ戻る</a></p>
+    <h1>{{ article.display_title }}</h1>
+    <dl>
+        {% if article.title_ja %}
+            <dt>原題</dt>
+            <dd>{{ article.title }}</dd>
+        {% endif %}
+        <dt>出典</dt>
+        <dd>{{ article.source_name }}</dd>
+        <dt>公開日時</dt>
+        <dd>{{ article.published_at|date:"Y-m-d H:i" }}</dd>
+        <dt>URL</dt>
+        <dd><a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.url }}</a></dd>
+    </dl>
+
+    <form method="post" action="{% url 'newsvoice:generate_summary' article.id %}" data-summary-form>
+        {% csrf_token %}
+        <button type="submit" data-loading-text="作成中...">原稿を再生成</button>
+    </form>
+
+    {% if article.summary %}
+        <section>
+            <h2>通常要約</h2>
+            <p>{{ article.summary.summary_text|linebreaksbr }}</p>
+        </section>
+        <section>
+            <h2>ラジオ風原稿</h2>
+            <p id="radio-script">{{ article.summary.radio_script|linebreaksbr }}</p>
+        </section>
+        <section>
+            <h2>AIの見解</h2>
+            <p>{{ article.summary.ai_opinion|linebreaksbr }}</p>
+            <p>影響ラベル: {{ article.summary.impact_label }}</p>
+        </section>
+        <section class="speech-panel">
+            <h2>読み上げ設定</h2>
+            <div class="speech-settings">
+                <label>音声
+                    <select id="speech-voice"></select>
+                </label>
+                <label>速度
+                    <select id="speech-rate">
+                        <option value="0.8">0.8</option>
+                        <option value="0.9" selected>0.9</option>
+                        <option value="1.0">1.0</option>
+                        <option value="1.1">1.1</option>
+                    </select>
+                </label>
+                <label>ピッチ
+                    <select id="speech-pitch">
+                        <option value="0.9">0.9</option>
+                        <option value="1.0" selected>1.0</option>
+                        <option value="1.1">1.1</option>
+                    </select>
+                </label>
+                <label>音量
+                    <select id="speech-volume">
+                        <option value="0.5">0.5</option>
+                        <option value="0.8">0.8</option>
+                        <option value="1.0" selected>1.0</option>
+                    </select>
+                </label>
+            </div>
+            <p id="speech-status" class="speech-status">読み上げ状態: 停止中</p>
+        </section>
+
+        <div class="actions">
+            <button type="button" data-speak-target="radio-script">簡易読み上げ</button>
+            <button type="button" data-pause-speech>一時停止</button>
+            <button type="button" data-resume-speech>再開</button>
+            <button type="button" data-stop-speech>停止</button>
+        </div>
+
+        <section class="speech-panel">
+            <h2>高品質音声</h2>
+            {% if latest_audio %}
+                <audio controls>
+                    <source src="{{ latest_audio.audio_file.url }}" type="audio/mpeg">
+                </audio>
+            {% endif %}
+            <form method="post" action="{% url 'newsvoice:generate_audio' article.id %}" data-audio-form>
+                {% csrf_token %}
+                <button type="submit">高品質音声を生成</button>
+            </form>
+            <p id="audio-generation-status" class="speech-status">
+                {% if high_quality_tts_enabled %}
+                    高品質音声の生成状態: 待機中
+                {% else %}
+                    高品質音声の生成状態: 現在は未対応
+                {% endif %}
+            </p>
+        </section>
+    {% else %}
+        <p>ラジオ原稿はまだ作成されていません。</p>
+    {% endif %}
+</article>
+{% endblock %}

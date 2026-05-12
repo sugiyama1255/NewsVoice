@@ -1,0 +1,165 @@
+body {
+    margin: 0;
+    color: #172026;
+    background: #f5f7f8;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.site-header {
+    padding: 16px 24px;
+    background: #0f3d4a;
+}
+
+.brand {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.page {
+    width: min(1120px, calc(100% - 32px));
+    margin: 24px auto;
+}
+
+.toolbar,
+.article-item,
+.detail {
+    background: #fff;
+    border: 1px solid #d9e1e5;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.search-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.search-form div {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+input,
+select,
+button,
+.button {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 40px;
+    border-radius: 6px;
+    border: 1px solid #b9c6cc;
+    font: inherit;
+}
+
+input,
+select {
+    width: 100%;
+    min-width: 0;
+    padding: 0 10px;
+    background: #fff;
+}
+
+button,
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    color: #fff;
+    background: #126d7f;
+    border-color: #126d7f;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+button:disabled,
+button[aria-busy="true"] {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.button-danger {
+    background: #a23a3a;
+    border-color: #a23a3a;
+}
+
+.article-list {
+    margin-top: 24px;
+}
+
+.article-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.article-item h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.article-item p,
+.detail dd {
+    color: #53636b;
+}
+
+.original-title {
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-content: start;
+}
+
+.speech-panel {
+    margin-top: 20px;
+}
+
+.speech-settings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.speech-settings label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.speech-status {
+    color: #53636b;
+}
+
+.message {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: #e9f5f8;
+}
+
+.message.error {
+    background: #fdeaea;
+}
+
+.detail {
+    line-height: 1.7;
+}
+
+.detail dt {
+    font-weight: 700;
+}
+
+@media (max-width: 760px) {
+    .article-item {
+        grid-template-columns: 1fr;
+    }
+}

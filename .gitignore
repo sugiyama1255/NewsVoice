@@ -1,0 +1,14 @@
+.venv/
+.idea/
+__pycache__/
+*.py[cod]
+db.sqlite3
+logs/
+media/
+staticfiles/
+config/settings_local.py
+chat_history.txt
+runserver.out.log
+runserver.err.log
+仕様書.txt
+仕様追加案①.txt

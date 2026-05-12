@@ -1,0 +1,32 @@
+{% extends "newsvoice/base.html" %}
+
+{% block title %}NewsVoice トップ{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+    <form method="get" class="search-form">
+        {{ form.as_div }}
+        <button type="submit">ニュース取得</button>
+    </form>
+</section>
+
+{% if search_results is not None %}
+    <section class="article-list">
+        <h1>検索結果</h1>
+        {% for article in search_results %}
+            {% include "newsvoice/includes/article_item.html" with article=article show_delete=False %}
+        {% empty %}
+            <p>検索結果はありません。</p>
+        {% endfor %}
+    </section>
+{% endif %}
+
+<section class="article-list">
+    <h1>DB登録済みニュース</h1>
+    {% for article in saved_articles %}
+        {% include "newsvoice/includes/article_item.html" with article=article show_delete=True %}
+    {% empty %}
+        <p>DBに登録されているニュースはまだありません。</p>
+    {% endfor %}
+</section>
+{% endblock %}

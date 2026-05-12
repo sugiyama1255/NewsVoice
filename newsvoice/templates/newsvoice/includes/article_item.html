@@ -1,0 +1,27 @@
+<article class="article-item">
+    <div>
+        <h2><a href="{% url 'newsvoice:detail' article.id %}">{{ article.display_title }}</a></h2>
+        {% if article.title_ja %}
+            <p class="original-title">原題: {{ article.title }}</p>
+        {% endif %}
+        <p>{{ article.source_name }} / {{ article.published_at|date:"Y-m-d H:i" }}</p>
+        <p>要約ステータス: {% if article.summary %}作成済み{% else %}未作成{% endif %}</p>
+    </div>
+    <div class="actions">
+        <form method="post" action="{% url 'newsvoice:generate_summary' article.id %}" data-summary-form>
+            {% csrf_token %}
+            <button type="submit" data-loading-text="作成中...">ラジオ原稿を作成</button>
+        </form>
+        {% if article.summary %}
+            <button type="button" data-speak="{{ article.summary.radio_script|escape }}">読み上げ</button>
+        {% endif %}
+        <button type="button" data-stop-speech>停止</button>
+        <a class="button" href="{{ article.url }}" target="_blank" rel="noopener">元記事を開く</a>
+        {% if show_delete %}
+            <form method="post" action="{% url 'newsvoice:delete_article' article.id %}">
+                {% csrf_token %}
+                <button class="button-danger" type="submit">削除</button>
+            </form>
+        {% endif %}
+    </div>
+</article>
