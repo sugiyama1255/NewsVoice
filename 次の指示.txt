@@ -1,0 +1,183 @@
+開発環境と本番環境で、どの設定ファイルを見ているかがズレないようにする。
+環境差分は settings_local.py にだけ集約する。
+
+NewsVoice の Django 設定構成を整理してください。
+
+目的:
+- config/settings_production.py を削除する
+- 本番・開発の個別設定は config/settings_local.py に統一する
+- .env は使わない
+- 本番Web、worker、manage.py確認コマンドがすべて settings_local.py を参照するようにする
+- ElevenLabs / Gemini などのAPIキーや機能ON/OFF設定も settings_local.py に集約する
+
+背景:
+現在、手動確認では settings_local.py を見ている一方で、本番Webは config.settings_production や .env を参照する構成になっており、ElevenLabs設定の反映確認が分かりにくくなっています。
+今後は、NewsVoiceでは settings_production.py と .env を使わず、settings_local.py に統一します。
+
+対応内容:
+
+1. config/settings_local.py を本番・個別設定の入口にする
+- settings_local.py の先頭で共通設定を読み込むようにしてください。
+
+例:
+from .settings import *
+
+- その下に、本番で必要な上書き設定を書く前提にしてください。
+
+例:
+DEBUG = False
+ALLOWED_HOSTS = [
+    "newsvoice.simoyakaviewer.com",
+]
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+
+NEWSVOICE_HIGH_QUALITY_TTS_ENABLED = True
+NEWSVOICE_DEFAULT_TTS_PROVIDER = "elevenlabs"
+ELEVENLABS_API_KEY = "ここにElevenLabs APIキーを設定"
+
+2. config/settings_production.py を削除する
+- settings_production.py は今後使わない方針にしてください。
+- 参照している箇所をすべて settings_local.py に変更してください。
+
+3. DJANGO_SETTINGS_MODULE を config.settings_local に統一する
+以下の参照先をすべて確認し、config.settings_production が残っていれば config.settings_local に変更してください。
+
+確認対象:
+- deploy/*.service
+- deploy/install_newsvoice_sudo.sh
+- Procfile
+- README.md
+- 本番起動手順
+- worker起動手順
+- その他 grep で見つかる settings_production 参照
+
+検索:
+grep -R "settings_production" -n .
+
+期待:
+settings_production の参照が残らないこと。
+
+4. .env を使わない
+- .env からアプリ設定値を読む前提をやめてください。
+- ElevenLabs、Gemini、NEWSVOICE_HIGH_QUALITY_TTS_ENABLED などは settings_local.py に書く方針にしてください。
+- systemd の EnvironmentFile=.env がある場合、不要なら削除してください。
+- ただし、既存の起動に必要な設定まで壊さないよう注意してください。
+- .env は今後 NewsVoice の設定置き場として使わないことを README に明記してください。
+
+5. settings_local.py はGit管理しない
+- config/settings_local.py は秘密情報を含むため、GitHubにコミットしないでください。
+- .gitignore に config/settings_local.py が含まれていることを確認してください。
+- もし追跡済みなら、秘密値をコミットしないように追跡解除してください。
+
+例:
+git rm --cached config/settings_local.py
+
+- 必要なら config/settings_local.example.py を作成し、秘密値なしの設定例だけをGit管理してください。
+
+6. settings_local.example.py を作成する
+本番で必要な設定例として、秘密値なしのテンプレートを追加してください。
+
+例:
+from .settings import *
+
+DEBUG = False
+ALLOWED_HOSTS = [
+    "newsvoice.simoyakaviewer.com",
+]
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+
+NEWSVOICE_HIGH_QUALITY_TTS_ENABLED = True
+NEWSVOICE_DEFAULT_TTS_PROVIDER = "elevenlabs"
+ELEVENLABS_API_KEY = "REPLACE_ME"
+GEMINI_API_KEY = "REPLACE_ME"
+
+7. READMEを更新する
+READMEに以下を明記してください。
+
+- NewsVoiceでは settings_production.py は使わない
+- 本番・個別設定は config/settings_local.py に書く
+- .env は使わない
+- APIキーは settings_local.py に書く
+- settings_local.py はGit管理しない
+- 本番の確認コマンドは --settings=config.settings_local を使う
+
+確認コマンド例:
+python manage.py shell --settings=config.settings_local -c "from django.conf import settings; print('HIGH=', getattr(settings, 'NEWSVOICE_HIGH_QUALITY_TTS_ENABLED', None)); print('PROVIDER=', getattr(settings, 'NEWSVOICE_DEFAULT_TTS_PROVIDER', None)); print('APIKEY=', bool(getattr(settings, 'ELEVENLABS_API_KEY', None)))"
+
+期待値:
+HIGH= True
+PROVIDER= elevenlabs
+APIKEY= True
+
+8. 本番反映手順も README に追記する
+例:
+python manage.py check --settings=config.settings_local
+python manage.py migrate --settings=config.settings_local
+python manage.py collectstatic --noinput --settings=config.settings_local
+sudo systemctl daemon-reload
+sudo systemctl restart newsvoice
+
+workerをsystemd管理する場合:
+sudo systemctl restart newsvoice-worker
+
+9. workerについて
+現在 newsvoice-worker.service が存在しない可能性があります。
+高品質音声生成やニュース取得が worker 経由で動く場合、newsvoice-worker.service を正式に追加してください。
+その場合も DJANGO_SETTINGS_MODULE=config.settings_local を使ってください。
+
+10. 動作確認
+変更後、以下を確認してください。
+
+- grep -R "settings_production" -n . で不要な参照が残っていないこと
+- python manage.py check --settings=config.settings_local が成功すること
+- python manage.py test --settings=config.settings_local が成功すること
+- 本番で Gunicorn が config.settings_local を使って起動していること
+- NewsVoice のTTS設定画面で API状態が「設定済み」、機能状態が「有効」になること
+- 高品質音声生成ボタンから ElevenLabs の mp3 生成が動くこと
+
+注意:
+- APIキーやパスワードなどの秘密値を表示・コミットしないでください。
+- 確認時は bool(settings.ELEVENLABS_API_KEY) のように、値そのものを出さないでください。
+- settings_local.py に統一するため、settings_production.py は削除して構いません。
+- .env は使わない方針にしてください。
+
+今回の設定整理の意図は、開発環境と本番環境の設定参照先がズレることで起きる不具合を防ぐことです。
+今後は「どの環境でも config.settings_local を入口にする」方針に統一してください。
+
+この変更の主目的:
+開発環境と本番環境で参照する設定ファイルが分かれ、
+「開発では有効だが本番では無効」
+「manage.py shell では読めるがWeb画面では読めない」
+というズレを防ぐことです。
+
+そのため、NewsVoiceでは settings_production.py と .env を使わず、
+開発環境・本番環境ともに config.settings_local を設定入口として統一してください。
+
+環境ごとの差分は settings_local.py の中だけに集約します。
+共通設定は config/settings.py に置き、
+settings_local.py は必ず from .settings import * で共通設定を読み込んだうえで、
+必要な差分だけを上書きしてください。
+
+期待する状態:
+- 開発サーバーも本番Gunicornも DJANGO_SETTINGS_MODULE=config.settings_local を使う
+- manage.py shell / check / migrate / test も --settings=config.settings_local で確認する
+- ElevenLabs / Gemini / 機能ON/OFF設定は settings_local.py に置く
+- .env は使わない
+- settings_production.py は削除する
+- settings_local.py はGit管理しない
+- settings_local.example.py に設定例だけを残す
+
+注意:
+本番特有の設定、たとえば DEBUG=False、ALLOWED_HOSTS、HTTPS関連設定なども、
+本番サーバーの settings_local.py に記載してください。
+開発環境の settings_local.py では DEBUG=True など、開発用の値にして構いません。
+
+目的は、開発と本番の値を完全一致させることではなく、
+「どの設定ファイルを読んでいるか」を統一し、
+設定の所在を一箇所にして混乱を防ぐことです。

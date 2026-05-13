@@ -1,0 +1,76 @@
+NewsVoiceの本番設定を、config/settings_local.py に統一してください。
+
+背景:
+現在、手動確認では settings_local.py の設定が読まれる一方で、本番Webは config.settings_production / .env 側を参照しており、ElevenLabs設定の反映確認が分かりにくくなっています。
+今後は本番環境でも settings_local.py を本番固有設定の置き場として使う方針に統一します。
+
+目的:
+- 本番のElevenLabs設定、Gemini設定、機能ON/OFFなどを settings_local.py に集約する
+- .env と settings_local.py の二重管理を避ける
+- manage.py shell と Gunicorn 本番Webで同じ設定値を参照できるようにする
+- 秘密情報はGitHubにコミットしない
+
+対応方針:
+1. config/settings_production.py の末尾で config/settings_local.py を読み込むようにしてください。
+   - settings_production.py の本番向け基本設定を読み込んだ後、最後に settings_local.py を import してください。
+   - settings_local.py の値が最終的に優先されるようにしてください。
+
+例:
+try:
+    from .settings_local import *
+except ImportError:
+    pass
+
+2. config/settings_local.py は本番固有・ローカル固有の秘密設定ファイルとして扱ってください。
+   - ELEVENLABS_API_KEY
+   - NEWSVOICE_HIGH_QUALITY_TTS_ENABLED
+   - NEWSVOICE_DEFAULT_TTS_PROVIDER
+   - GEMINI_API_KEY
+   - その他の秘密情報や環境別フラグ
+   を settings_local.py に記載する前提にしてください。
+
+3. settings_local.py はGit管理しないでください。
+   - .gitignore に config/settings_local.py が含まれているか確認してください。
+   - 含まれていなければ追加してください。
+   - 既にGit管理されている場合は、秘密値をコミットしないように注意し、必要なら追跡解除手順を提示してください。
+
+4. .env は今回のアプリ設定値の主置き場として使わない方針にしてください。
+   - ただし systemd 側で DJANGO_SETTINGS_MODULE などに使っている場合は、既存動作を壊さないでください。
+   - ElevenLabsやGeminiなどのアプリ秘密情報は settings_local.py に寄せてください。
+
+5. 本番で以下の確認コマンドを使えるようにREADMEへ追記してください。
+
+python manage.py shell --settings=config.settings_production -c "from django.conf import settings; print('HIGH=', getattr(settings, 'NEWSVOICE_HIGH_QUALITY_TTS_ENABLED', None)); print('PROVIDER=', getattr(settings, 'NEWSVOICE_DEFAULT_TTS_PROVIDER', None)); print('APIKEY=', bool(getattr(settings, 'ELEVENLABS_API_KEY', None)))"
+
+期待値:
+HIGH= True
+PROVIDER= elevenlabs
+APIKEY= True
+
+6. 本番用 config/settings_local.py の設定例を README に記載してください。
+   ただし実APIキーなどの秘密値は書かないでください。
+
+例:
+NEWSVOICE_HIGH_QUALITY_TTS_ENABLED = True
+NEWSVOICE_DEFAULT_TTS_PROVIDER = "elevenlabs"
+ELEVENLABS_API_KEY = "ここにElevenLabs APIキーを設定"
+
+7. Gunicorn / worker も config.settings_production を使う前提で、settings_production 経由で settings_local.py が読まれることを確認してください。
+
+8. 反映後の作業手順も README に追記してください。
+
+例:
+python manage.py check --settings=config.settings_production
+python manage.py migrate --settings=config.settings_production
+python manage.py collectstatic --noinput --settings=config.settings_production
+sudo systemctl restart newsvoice
+
+9. 可能であれば newsvoice-worker.service も systemd に正式登録できるようにしてください。
+   現在 sudo systemctl restart newsvoice-worker が Unit not found になるため、workerの常駐管理も整理してください。
+   ただし今回の主目的は settings_local.py への設定統一なので、worker対応は分離しても構いません。
+
+注意:
+- APIキーやパスワードなどの秘密値を表示・コミットしないでください。
+- 設定確認時は bool(settings.ELEVENLABS_API_KEY) のように、値そのものを出さないでください。
+- 既存の本番動作を壊さないよう、settings_production の基本設定は維持し、最後に settings_local.py を上書き読み込みする形にしてください。
+- 変更後は manage.py test を実行してください。
