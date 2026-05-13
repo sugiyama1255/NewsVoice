@@ -1,0 +1,22 @@
+{% extends "newsvoice/base.html" %}
+
+{% block title %}2段階認証 - NewsVoice{% endblock %}
+
+{% block content %}
+<section class="auth-panel">
+    <h1>2段階認証</h1>
+    <div class="two-factor-setup">
+        <img class="two-factor-qr" src="{{ qr_data_uri }}" alt="2段階認証QRコード">
+        <div class="setting-row">
+            <span>手動入力キー</span>
+            <strong class="manual-secret">{{ manual_secret }}</strong>
+        </div>
+    </div>
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.as_div }}
+        <button type="submit">ログイン</button>
+    </form>
+</section>
+{% endblock %}

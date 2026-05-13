@@ -10,6 +10,14 @@
 <body>
 <header class="site-header">
     <a class="brand" href="{% url 'newsvoice:index' %}">NewsVoice</a>
+    {% if request.user.is_authenticated %}
+        <nav class="header-actions" aria-label="アカウント">
+            <span class="header-username">{{ request.user.get_username }}</span>
+            <a class="header-button" href="{% url 'newsvoice:tts_settings' %}">音声設定</a>
+            <a class="header-button" href="{% url 'newsvoice:settings' %}">設定</a>
+            <a class="header-button" href="{% url 'newsvoice:logout' %}">ログアウト</a>
+        </nav>
+    {% endif %}
 </header>
 <main class="page">
     {% if messages %}

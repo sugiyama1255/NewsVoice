@@ -3,5 +3,5 @@ class TTSServiceError(Exception):
 
 
 class BaseTTSService:
-    def synthesize(self, text, voice_name=None):
+    def synthesize(self, text, **kwargs):
         raise NotImplementedError

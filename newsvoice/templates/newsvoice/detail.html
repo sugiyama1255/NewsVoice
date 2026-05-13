@@ -79,22 +79,38 @@
 
         <section class="speech-panel">
             <h2>高品質音声</h2>
+            <dl>
+                <dt>音声</dt>
+                <dd>{% if tts_setting.default_voice %}{{ tts_setting.default_voice.name }}{% else %}未設定{% endif %}</dd>
+                <dt>モデル</dt>
+                <dd>{{ tts_setting.model_id }}</dd>
+            </dl>
             {% if latest_audio %}
                 <audio controls>
                     <source src="{{ latest_audio.audio_file.url }}" type="audio/mpeg">
                 </audio>
             {% endif %}
-            <form method="post" action="{% url 'newsvoice:generate_audio' article.id %}" data-audio-form>
+            <form
+                method="post"
+                action="{% url 'newsvoice:generate_audio' article.id %}"
+                data-audio-form
+                {% if pending_audio_job %}data-pending-job-url="{% url 'newsvoice:job_status' pending_audio_job.id %}"{% endif %}
+            >
                 {% csrf_token %}
-                <button type="submit">高品質音声を生成</button>
+                <button type="submit" {% if pending_audio_job %}disabled aria-busy="true"{% endif %}>
+                    {% if pending_audio_job %}生成中...{% else %}高品質音声を生成{% endif %}
+                </button>
             </form>
             <p id="audio-generation-status" class="speech-status">
-                {% if high_quality_tts_enabled %}
+                {% if pending_audio_job %}
+                    高品質音声の生成状態: 生成中
+                {% elif high_quality_tts_enabled %}
                     高品質音声の生成状態: 待機中
                 {% else %}
                     高品質音声の生成状態: 現在は未対応
                 {% endif %}
             </p>
+            <p class="speech-status">{{ tts_setting.attribution_text }}</p>
         </section>
     {% else %}
         <p>ラジオ原稿はまだ作成されていません。</p>

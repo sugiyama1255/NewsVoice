@@ -137,7 +137,14 @@ def fetch_articles(category="general", keyword="", max_records=5, timespan="1d",
     return payload.get("articles", [])
 
 
-def fetch_and_store_articles(category="general", keyword="", max_records=5, timespan="1d", language=""):
+def fetch_and_store_articles(
+    category="general",
+    keyword="",
+    max_records=5,
+    timespan="1d",
+    language="",
+    username="",
+):
     total_started_at = time.monotonic()
     raw_articles = fetch_articles(
         category=category,
@@ -175,8 +182,10 @@ def fetch_and_store_articles(category="general", keyword="", max_records=5, time
 
         db_started_at = time.monotonic()
         article, _ = NewsArticle.objects.update_or_create(
+            username=username,
             url=url,
             defaults={
+                "username": username,
                 "title": title[:500],
                 "title_ja": title_ja[:500],
                 "source_name": item.get("sourceCountry") or urlparse(url).netloc,

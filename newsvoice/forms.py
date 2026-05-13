@@ -1,6 +1,21 @@
 from django import forms
 
 
+class LoginForm(forms.Form):
+    username = forms.CharField(label="ユーザー名", max_length=150)
+    password = forms.CharField(label="パスワード", widget=forms.PasswordInput)
+
+
+class TwoFactorCodeForm(forms.Form):
+    code = forms.RegexField(
+        label="認証アプリの6桁コード",
+        regex=r"^\d{6}$",
+        max_length=6,
+        min_length=6,
+        error_messages={"invalid": "6桁の数字を入力してください。"},
+    )
+
+
 class NewsSearchForm(forms.Form):
     CATEGORY_CHOICES = [
         ("general", "総合"),

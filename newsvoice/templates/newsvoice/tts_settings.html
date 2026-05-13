@@ -1,0 +1,67 @@
+{% extends "newsvoice/base.html" %}
+
+{% block title %}高品質音声設定 - NewsVoice{% endblock %}
+
+{% block content %}
+<section class="detail">
+    <h1>高品質音声設定</h1>
+    <dl>
+        <dt>Provider</dt>
+        <dd>ElevenLabs</dd>
+        <dt>API状態</dt>
+        <dd>{% if api_configured %}設定済み{% else %}未設定{% endif %}</dd>
+        <dt>機能状態</dt>
+        <dd>{% if high_quality_tts_enabled %}有効{% else %}無効{% endif %}</dd>
+        <dt>モデル</dt>
+        <dd>{{ tts_setting.model_id }}</dd>
+        <dt>既定音声</dt>
+        <dd>{% if tts_setting.default_voice %}{{ tts_setting.default_voice.name }}{% else %}未設定{% endif %}</dd>
+    </dl>
+
+    <form method="post" action="{% url 'newsvoice:refresh_elevenlabs_voices' %}" class="inline-form">
+        {% csrf_token %}
+        <button type="submit">声一覧を更新</button>
+    </form>
+
+    <div class="job-table-wrap">
+        <table class="job-table">
+            <thead>
+                <tr>
+                    <th>声名</th>
+                    <th>カテゴリ</th>
+                    <th>サンプル</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for voice in voices %}
+                    <tr>
+                        <td>
+                            {{ voice.name }}
+                            {% if voice.is_default %}<span class="status-pill status-completed">既定</span>{% endif %}
+                        </td>
+                        <td>{{ voice.category|default:"-" }}</td>
+                        <td>
+                            {% if voice.preview_url %}
+                                <audio controls preload="none" src="{{ voice.preview_url }}"></audio>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'newsvoice:set_default_voice' voice.voice_id %}" class="inline-form">
+                                {% csrf_token %}
+                                <button type="submit" {% if voice.is_default %}disabled{% endif %}>この声を使う</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4">声一覧はまだありません。</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

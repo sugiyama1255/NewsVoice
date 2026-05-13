@@ -1,0 +1,16 @@
+[Unit]
+Description=Background worker for newsvoice
+After=network.target newsvoice.service
+
+[Service]
+User=hisatsugu
+Group=www-data
+WorkingDirectory=/home/hisatsugu/apps/newsvoice
+EnvironmentFile=/home/hisatsugu/apps/newsvoice/.env
+ExecStart=/home/hisatsugu/apps/newsvoice/.venv/bin/python manage.py process_jobs --settings=config.settings_production
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

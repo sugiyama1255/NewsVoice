@@ -138,6 +138,7 @@ def generate_radio_summary(article):
     summary, _ = NewsSummary.objects.update_or_create(
         article=article,
         defaults={
+            "username": article.username,
             **parsed,
             "model_name": settings.GEMINI_MODEL,
             "prompt_text": prompt,

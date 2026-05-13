@@ -1,0 +1,24 @@
+{% extends "newsvoice/base.html" %}
+
+{% block title %}設定 - NewsVoice{% endblock %}
+
+{% block content %}
+<section class="auth-panel settings-panel">
+    <h1>設定</h1>
+    <div class="two-factor-setup">
+        <img class="two-factor-qr" src="{{ qr_data_uri }}" alt="2段階認証QRコード">
+        <div class="setting-row">
+            <span>手動入力キー</span>
+            <strong class="manual-secret">{{ manual_secret }}</strong>
+        </div>
+    </div>
+    <div class="setting-row">
+        <span>認証アプリ</span>
+        <span>Google Authenticator、Microsoft AuthenticatorなどでQRコードを読み取ってください。</span>
+    </div>
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        <button type="submit">QRを再発行</button>
+    </form>
+</section>
+{% endblock %}

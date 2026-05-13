@@ -1,4 +1,5 @@
 {% extends "newsvoice/base.html" %}
+{% load newsvoice_extras %}
 
 {% block title %}NewsVoice トップ{% endblock %}
 
@@ -8,6 +9,77 @@
         {{ form.as_div }}
         <button type="submit">ニュース取得</button>
     </form>
+</section>
+
+<section class="job-list" data-job-list>
+    <details>
+        <summary class="job-list-summary">
+            <span>ジョブ状態</span>
+            <span class="job-list-toggle">表示</span>
+        </summary>
+        <div class="section-heading">
+            <h1>ジョブ状態</h1>
+            <a class="button button-secondary" href="{% url 'newsvoice:index' %}">更新</a>
+        </div>
+        {% if recent_jobs %}
+            <div class="job-table-wrap">
+                <table class="job-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>種別</th>
+                            <th>状態</th>
+                            <th>対象</th>
+                            <th>作成</th>
+                            <th>完了</th>
+                            <th>結果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in recent_jobs %}
+                            <tr data-job-status="{{ job.status }}">
+                                <td>#{{ job.id }}</td>
+                                <td>
+                                    {% if job.job_type == "news_fetch" %}
+                                        ニュース取得
+                                    {% elif job.job_type == "summary" %}
+                                        原稿生成
+                                    {% elif job.job_type == "audio" %}
+                                        音声生成
+                                    {% else %}
+                                        {{ job.job_type }}
+                                    {% endif %}
+                                </td>
+                                <td><span class="status-pill status-{{ job.status }}">{{ job.status }}</span></td>
+                                <td>
+                                    {% if job.article and job.article.source_name != "NewsVoice Job" %}
+                                        <a href="{% url 'newsvoice:detail' job.article.id %}">{{ job.article.display_title }}</a>
+                                    {% elif job.job_type == "news_fetch" %}
+                                        ニュース取得
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ job.created_at|date:"m/d H:i:s" }}</td>
+                                <td>{{ job.completed_at|date:"m/d H:i:s"|default:"-" }}</td>
+                                <td>
+                                    {% if job.status == "completed" and job.job_type == "news_fetch" %}
+                                        {{ job.result.count|default:0 }}件
+                                    {% elif job.status == "failed" %}
+                                        <span class="job-error">{{ job.error_message|truncatechars:60 }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>ジョブはまだありません。</p>
+        {% endif %}
+    </details>
 </section>
 
 {% if search_results is not None %}

@@ -1,3 +1,4 @@
+{% load newsvoice_extras %}
 <article class="article-item">
     <div>
         <h2><a href="{% url 'newsvoice:detail' article.id %}">{{ article.display_title }}</a></h2>
@@ -14,6 +15,22 @@
         </form>
         {% if article.summary %}
             <button type="button" data-speak="{{ article.summary.radio_script|escape }}">読み上げ</button>
+            {% with pending_audio_job=pending_audio_job_by_article|get_item:article.id %}
+                <form
+                    method="post"
+                    action="{% url 'newsvoice:generate_audio' article.id %}"
+                    data-audio-form
+                    {% if pending_audio_job %}data-pending-job-url="{% url 'newsvoice:job_status' pending_audio_job.id %}"{% endif %}
+                >
+                    {% csrf_token %}
+                    <button type="submit" {% if pending_audio_job or not high_quality_tts_enabled %}disabled{% endif %} {% if pending_audio_job %}aria-busy="true"{% endif %}>
+                        {% if pending_audio_job %}生成中...{% else %}高品質音声を生成{% endif %}
+                    </button>
+                    <span class="speech-status" data-audio-status>
+                        {% if pending_audio_job %}生成中{% elif high_quality_tts_enabled %}待機中{% else %}未対応{% endif %}
+                    </span>
+                </form>
+            {% endwith %}
         {% endif %}
         <button type="button" data-stop-speech>停止</button>
         <a class="button" href="{{ article.url }}" target="_blank" rel="noopener">元記事を開く</a>

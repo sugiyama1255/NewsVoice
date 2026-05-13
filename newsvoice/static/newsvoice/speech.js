@@ -21,6 +21,112 @@
         return Number.isFinite(value) ? value : fallback;
     }
 
+    function postForm(form) {
+        return fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        }).then(function (response) {
+            return response.json().then(function (payload) {
+                if (!response.ok) {
+                    throw payload;
+                }
+                return payload;
+            });
+        });
+    }
+
+    function pollJob(jobUrl, onProgress, onComplete, onError) {
+        var pollInterval = 2500;
+        function poll() {
+            fetch(jobUrl, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (payload) {
+                    if (payload.status === "completed") {
+                        onComplete(payload);
+                        return;
+                    }
+                    if (payload.status === "failed") {
+                        onError(payload);
+                        return;
+                    }
+                    onProgress(payload);
+                    window.setTimeout(poll, pollInterval);
+                })
+                .catch(function () {
+                    onError({ error: "ジョブ状態の確認に失敗しました。" });
+                });
+        }
+        poll();
+    }
+
+    function setAudioButtonBusy(button, busy, text) {
+        if (!button) {
+            return;
+        }
+        if (!button.dataset.originalText) {
+            button.dataset.originalText = button.textContent;
+        }
+        button.disabled = busy;
+        if (busy) {
+            button.textContent = text || "生成中...";
+            button.setAttribute("aria-busy", "true");
+            return;
+        }
+        button.textContent = text || button.dataset.originalText || "高品質音声を生成";
+        button.removeAttribute("aria-busy");
+    }
+
+    function watchAudioJob(jobUrl, form, status) {
+        var submitButton = form ? form.querySelector("button[type='submit']") : null;
+        setAudioButtonBusy(submitButton, true, "生成中...");
+        setAudioStatus(status, "生成中");
+        pollJob(
+            jobUrl,
+            function () {
+                setAudioStatus(status, "生成中");
+            },
+            function (jobPayload) {
+                setAudioStatus(status, "完了");
+                if (jobPayload.audio_url || (jobPayload.result && jobPayload.result.audio_url)) {
+                    window.location.reload();
+                    return;
+                }
+                setAudioButtonBusy(submitButton, false);
+            },
+            function (jobPayload) {
+                setAudioStatus(status, jobPayload.error || "生成に失敗しました。");
+                setAudioButtonBusy(submitButton, false);
+            }
+        );
+    }
+
+    function getAudioStatusElement(form) {
+        if (!form) {
+            return null;
+        }
+        return form.querySelector("[data-audio-status]") || document.getElementById("audio-generation-status");
+    }
+
+    function setAudioStatus(status, text) {
+        if (!status) {
+            return;
+        }
+        if (status.id === "audio-generation-status") {
+            status.innerText = "高品質音声の生成状態: " + text;
+            return;
+        }
+        status.innerText = text;
+    }
+
     function getVoices() {
         if (!("speechSynthesis" in window)) {
             return [];
@@ -136,16 +242,60 @@
         setStatus("SpeechSynthesis非対応");
     }
 
+    var initialAudioForm = document.querySelector("[data-audio-form][data-pending-job-url]");
+    if (initialAudioForm) {
+        watchAudioJob(
+            initialAudioForm.dataset.pendingJobUrl,
+            initialAudioForm,
+            getAudioStatusElement(initialAudioForm)
+        );
+    }
+    document.querySelectorAll("[data-audio-form][data-pending-job-url]").forEach(function (form) {
+        if (form !== initialAudioForm) {
+            watchAudioJob(form.dataset.pendingJobUrl, form, getAudioStatusElement(form));
+        }
+    });
+
     document.addEventListener("submit", function (event) {
         var summaryForm = event.target.closest("[data-summary-form]");
         if (summaryForm) {
+            event.preventDefault();
             var submitButton = summaryForm.querySelector("button[type='submit']");
             if (submitButton && !submitButton.disabled) {
                 submitButton.dataset.originalText = submitButton.textContent;
-                submitButton.textContent = submitButton.dataset.loadingText || "作成中...";
+                submitButton.textContent = "受付中...";
                 submitButton.disabled = true;
                 submitButton.setAttribute("aria-busy", "true");
             }
+            postForm(summaryForm)
+                .then(function (payload) {
+                    if (submitButton) {
+                        submitButton.textContent = "生成中...";
+                    }
+                    pollJob(
+                        payload.job_url,
+                        function () {},
+                        function () {
+                            window.location.reload();
+                        },
+                        function (jobPayload) {
+                            if (submitButton) {
+                                submitButton.textContent = submitButton.dataset.originalText || "ラジオ原稿を作成";
+                                submitButton.disabled = false;
+                                submitButton.removeAttribute("aria-busy");
+                            }
+                            window.alert(jobPayload.error || "ラジオ原稿の生成に失敗しました。");
+                        }
+                    );
+                })
+                .catch(function (payload) {
+                    if (submitButton) {
+                        submitButton.textContent = submitButton.dataset.originalText || "ラジオ原稿を作成";
+                        submitButton.disabled = false;
+                        submitButton.removeAttribute("aria-busy");
+                    }
+                    window.alert(payload.error || "ラジオ原稿の生成を開始できませんでした。");
+                });
             return;
         }
 
@@ -154,39 +304,30 @@
             return;
         }
         event.preventDefault();
-        var status = document.getElementById("audio-generation-status");
-        if (status) {
-            status.innerText = "高品質音声の生成状態: 生成中";
+        var submitButton = form.querySelector("button[type='submit']");
+        if (submitButton && submitButton.disabled) {
+            return;
         }
-        fetch(form.action, {
-            method: "POST",
-            body: new FormData(form),
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        })
-            .then(function (response) {
-                return response.json().then(function (payload) {
-                    if (!response.ok) {
-                        throw payload;
-                    }
-                    return payload;
-                });
-            })
+        var status = getAudioStatusElement(form);
+        setAudioButtonBusy(submitButton, true, "生成中...");
+        setAudioStatus(status, "生成中");
+        postForm(form)
             .then(function (payload) {
-                if (status) {
-                    status.innerText = payload.reused
-                        ? "高品質音声の生成状態: 既存音声を再利用しました"
-                        : "高品質音声の生成状態: 完了";
+                if (payload.status === "queued") {
+                    setAudioStatus(status, "受付済み");
+                    watchAudioJob(payload.job_url, form, status);
+                    return;
                 }
+                setAudioStatus(status, payload.reused ? "既存音声を再利用しました" : "完了");
                 if (payload.audio_url) {
                     window.location.reload();
+                    return;
                 }
+                setAudioButtonBusy(submitButton, false);
             })
             .catch(function (payload) {
-                if (status) {
-                    status.innerText = "高品質音声の生成状態: " + (payload.error || "生成に失敗しました。");
-                }
+                setAudioStatus(status, payload.error || "生成に失敗しました。");
+                setAudioButtonBusy(submitButton, false);
             });
     });
 })();
