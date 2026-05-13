@@ -1,7 +1,7 @@
-"""Django全体設定。
+"""Django共通設定。
 
-共通設定をここに置き、APIキーなど環境ごとに変える値は末尾で読み込む
-config/settings_local.py で上書きします。
+環境ごとの差分やAPIキーなどの秘密値は config/settings_local.py に置き、
+settings_local.py からこの共通設定を読み込みます。
 """
 
 from pathlib import Path
@@ -189,9 +189,3 @@ LOGGING = {
         },
     },
 }
-
-# 環境固有設定を最後に読み込み、上の初期値を上書きできるようにします。
-try:
-    from .settings_local import *
-except ImportError:
-    pass

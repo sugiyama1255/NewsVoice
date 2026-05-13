@@ -6,8 +6,8 @@ After=network.target newsvoice.service
 User=hisatsugu
 Group=www-data
 WorkingDirectory=/home/hisatsugu/apps/newsvoice
-EnvironmentFile=/home/hisatsugu/apps/newsvoice/.env
-ExecStart=/home/hisatsugu/apps/newsvoice/.venv/bin/python manage.py process_jobs --settings=config.settings_production
+Environment=DJANGO_SETTINGS_MODULE=config.settings_local
+ExecStart=/home/hisatsugu/apps/newsvoice/.venv/bin/python manage.py process_jobs --settings=config.settings_local
 
 Restart=always
 RestartSec=10
