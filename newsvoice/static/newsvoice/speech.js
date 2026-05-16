@@ -172,6 +172,48 @@
             });
     }
 
+    function initVoiceFilter() {
+        var filter = document.querySelector("[data-voice-filter]");
+        if (!filter) {
+            return;
+        }
+        var input = filter.querySelector("[data-voice-filter-input]");
+        var count = filter.querySelector("[data-voice-filter-count]");
+        var rows = Array.prototype.slice.call(document.querySelectorAll("[data-voice-row]"));
+        var emptyRow = document.querySelector("[data-voice-empty]");
+        if (!input || rows.length === 0) {
+            return;
+        }
+
+        function normalize(value) {
+            return (value || "").toString().toLowerCase();
+        }
+
+        function updateRows() {
+            var terms = normalize(input.value).split(/\s+/).filter(Boolean);
+            var visibleCount = 0;
+            rows.forEach(function (row) {
+                var searchableText = normalize(row.dataset.voiceSearch);
+                var matches = terms.every(function (term) {
+                    return searchableText.indexOf(term) !== -1;
+                });
+                row.hidden = !matches;
+                if (matches) {
+                    visibleCount += 1;
+                }
+            });
+            if (emptyRow) {
+                emptyRow.hidden = visibleCount !== 0;
+            }
+            if (count) {
+                count.innerText = visibleCount + "件を表示中";
+            }
+        }
+
+        input.addEventListener("change", updateRows);
+        updateRows();
+    }
+
     function speak(text) {
         if (!text || !("speechSynthesis" in window)) {
             setStatus("SpeechSynthesis非対応");
@@ -241,6 +283,8 @@
     } else {
         setStatus("SpeechSynthesis非対応");
     }
+
+    initVoiceFilter();
 
     var initialAudioForm = document.querySelector("[data-audio-form][data-pending-job-url]");
     if (initialAudioForm) {

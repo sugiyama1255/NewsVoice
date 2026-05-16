@@ -368,6 +368,53 @@ button[aria-busy="true"] {
     width: min(260px, 100%);
 }
 
+.voice-name-col {
+    width: 40%;
+}
+
+.voice-category-col {
+    width: 14%;
+}
+
+.voice-sample-col {
+    width: 32%;
+}
+
+.voice-action-col {
+    width: 14%;
+}
+
+.job-table th:nth-child(3),
+.job-table td:nth-child(3) {
+    min-width: 280px;
+}
+
+.job-table td audio {
+    width: min(360px, 100%);
+}
+
+.voice-library-note {
+    margin-top: 14px;
+    color: #53636b;
+    font-size: 14px;
+}
+
+.voice-filter {
+    display: grid;
+    gap: 6px;
+    margin-top: 18px;
+}
+
+.voice-filter label {
+    font-weight: 700;
+}
+
+.voice-filter-count {
+    margin: 0;
+    color: #53636b;
+    font-size: 14px;
+}
+
 .message {
     padding: 10px 12px;
     border-radius: 6px;

@@ -8,10 +8,8 @@ logs/
 media/
 staticfiles/
 config/settings_local.py
-codex_readme.txt
-chat_history.txt
-runserver.out.log
-runserver.err.log
+*.txt
+*.log
 仕様書.txt
 仕様追加案①.txt
 仕様追加案②.txt

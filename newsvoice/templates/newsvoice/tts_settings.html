@@ -23,8 +23,35 @@
         <button type="submit">声一覧を更新</button>
     </form>
 
+    <div class="voice-library-note">
+        ElevenLabs管理画面でVoice Libraryの声を追加したあと、この画面で声一覧を更新してください。
+    </div>
+
+    <div class="voice-filter" data-voice-filter>
+        <label for="voice-filter-query">声を検索・絞り込み</label>
+        <select
+            id="voice-filter-query"
+            data-voice-filter-input
+        >
+            <option value="">すべて</option>
+            <option value="Japanese">Japanese</option>
+            <option value="Japan">Japan</option>
+            <option value="Narration">Narration</option>
+            <option value="Narrator">Narrator</option>
+            <option value="Calm">Calm</option>
+            <option value="News">News</option>
+        </select>
+        <p class="voice-filter-count" data-voice-filter-count>{{ voices|length }}件を表示中</p>
+    </div>
+
     <div class="job-table-wrap">
         <table class="job-table">
+            <colgroup>
+                <col class="voice-name-col">
+                <col class="voice-category-col">
+                <col class="voice-sample-col">
+                <col class="voice-action-col">
+            </colgroup>
             <thead>
                 <tr>
                     <th>声名</th>
@@ -35,7 +62,10 @@
             </thead>
             <tbody>
                 {% for voice in voices %}
-                    <tr>
+                    <tr
+                        data-voice-row
+                        data-voice-search="{{ voice.name }} {{ voice.category }} {{ voice.description }} {{ voice.labels }}"
+                    >
                         <td>
                             {{ voice.name }}
                             {% if voice.is_default %}<span class="status-pill status-completed">既定</span>{% endif %}
@@ -60,6 +90,9 @@
                         <td colspan="4">声一覧はまだありません。</td>
                     </tr>
                 {% endfor %}
+                <tr data-voice-empty hidden>
+                    <td colspan="4">条件に一致する声はありません。</td>
+                </tr>
             </tbody>
         </table>
     </div>

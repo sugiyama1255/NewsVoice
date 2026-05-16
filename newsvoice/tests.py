@@ -524,6 +524,28 @@ class ElevenLabsTTSTests(TestCase):
         self.assertContains(response, "Radio Voice")
         self.assertContains(response, "https://example.com/preview.mp3")
 
+    def test_tts_settings_view_has_voice_filter_and_search_data(self):
+        ElevenLabsVoice.objects.create(
+            username=self.user.username,
+            voice_id="voice-1",
+            name="Japanese Narrator",
+            category="professional",
+            description="Calm Japanese narration voice",
+            labels={"language": "Japanese", "accent": "Japan", "use_case": "narrator"},
+        )
+
+        response = self.client.get(reverse("newsvoice:tts_settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "声を検索・絞り込み")
+        self.assertContains(response, '<option value="Japanese">Japanese</option>', html=False)
+        self.assertContains(response, '<option value="Calm">Calm</option>', html=False)
+        self.assertContains(response, "data-voice-search")
+        self.assertContains(response, "Calm Japanese narration voice")
+        self.assertNotContains(response, "language: Japanese")
+        self.assertNotContains(response, "accent: Japan")
+        self.assertNotContains(response, "use_case: narrator")
+
     @override_settings(NEWSVOICE_HIGH_QUALITY_TTS_ENABLED=True, ELEVENLABS_API_KEY="test-key")
     @patch("newsvoice.services.tts.elevenlabs_tts.requests.post")
     def test_generate_audio_for_record_calls_elevenlabs_and_saves_mp3(self, mock_post):
